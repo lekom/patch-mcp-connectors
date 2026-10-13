@@ -1,0 +1,1229 @@
+{
+  "cloudEndpoint": "https://www.patchmcp.com/mcp",
+  "description": "Make AI phone calls from your verified number and retrieve answers, transcripts and recordings.",
+  "homepage": "https://www.patchmcp.com",
+  "icon": "https://www.patchmcp.com/logo.svg",
+  "identifier": "patch-mcp",
+  "name": "Patch MCP",
+  "prompts": [],
+  "resources": [],
+  "tools": [
+    {
+      "name": "estimate_call",
+      "description": "Check route availability, estimated one-minute usage, and remaining allowance before dialing. Calls in Central America, Europe, North America, and South America. Calls involving any non-US/Canadian number require a paid plan. Uses the verified caller ID and destination to price the route. Uses cached routing data or dialed prefixes without a paid lookup. Does not place a call, send a code, or reserve plan usage. Estimates expire and are rechecked before dialing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Destination in E.164 format, including country code."
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "to": {
+                "type": "string",
+                "description": "Normalized destination in E.164 format."
+              },
+              "from": {
+                "type": "string",
+                "description": "Verified caller ID in E.164 format."
+              },
+              "currency": {
+                "type": "string",
+                "const": "USD",
+                "description": "Billing currency."
+              },
+              "language": {
+                "type": "string",
+                "description": "Resolved call language."
+              },
+              "locale": {
+                "type": "string",
+                "description": "Resolved BCP 47 language/locale for this call."
+              },
+              "voice_engine": {
+                "type": "string",
+                "description": "Voice provider used for this quote."
+              },
+              "one_minute_usage_percent": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "description": "Estimated monthly allowance percentage for a one-minute call; null on the free plan."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "estimated_total_cents_at_one_minute": {
+                "type": "string",
+                "description": "Estimated combined provider cost for one minute."
+              },
+              "estimated_telnyx_cents_at_one_minute": {
+                "type": "string",
+                "description": "Estimated carrier cost for one minute."
+              },
+              "estimate_exclusions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Excluded cost category."
+                },
+                "description": "Costs not included in this estimate."
+              },
+              "max_duration_minutes": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "description": "Free-call duration cap; null for paid calls."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usage_left_percent": {
+                "type": "number",
+                "description": "Remaining plan usage percentage."
+              },
+              "rate_version": {
+                "type": "string",
+                "description": "Rate deck version."
+              },
+              "rate_expires_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "ISO 8601 rate expiry; null if expiry is quote-specific."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "quote_expires_at": {
+                "type": "string",
+                "description": "ISO 8601 quote expiry."
+              },
+              "routing_basis": {
+                "type": "string",
+                "description": "Evidence used to price the route."
+              },
+              "provider_cost_is_customer_charge": {
+                "type": "boolean",
+                "description": "Whether provider costs count toward paid usage."
+              },
+              "message": {
+                "type": "string",
+                "description": "Allowance and route guidance."
+              }
+            },
+            "required": [
+              "to",
+              "from",
+              "currency",
+              "language",
+              "locale",
+              "voice_engine",
+              "one_minute_usage_percent",
+              "estimated_total_cents_at_one_minute",
+              "estimated_telnyx_cents_at_one_minute",
+              "estimate_exclusions",
+              "max_duration_minutes",
+              "usage_left_percent",
+              "rate_version",
+              "rate_expires_at",
+              "quote_expires_at",
+              "routing_basis",
+              "provider_cost_is_customer_charge",
+              "message"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "Estimate call",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "place_call",
+      "description": "Place the call FROM the authenticated user's own verified phone number to accomplish a specific objective (book a table, ask a question, chase an order). A real-time voice agent handles the call, including automated phone menus and hold queues. Its default opening says who it is calling for and states the call's purpose. Users can customize the introduction and conversation style under Account \u2192 Call agent instructions; saved instructions apply to new calls, with the objective, context and other call details added by the server. The first spoken turn to a human must still include the recording disclosure in the resolved call language (English: \"This call is being recorded.\") after the introduction and before the first business question or request. Returns immediately with a call_id and resolved locale, language, and voice; the call proceeds in the background and typically takes 2\u20135 minutes \u2014 poll get_call (pass wait_seconds to long-poll) until the status is terminal. The response includes a listen_url: a private web link where the user can hear the call live, watch the transcript, and stop the call \u2014 offer it to the user. Calls in Central America, Europe, North America, and South America, subject to route availability; never for emergencies. Calls involving a non-US/Canadian number require a paid plan from the first call. Rates vary by caller ID and destination; use estimate_call to check available minutes. Paid usage follows telephone, AI and any lookup costs, including unsuccessful attempts, and can update after the call. Calls can be placed at any time of day, any day of the week, and the user is responsible for fair use; one call runs at a time per account and volume is governed by the plan \u2014 rejections return a machine-readable `error` code with retry guidance, so relay the message to the user rather than retrying blindly. The voice agent receives the name of the person the call is for: if the account has no name on file the call is rejected with `user_name_required` \u2014 ask your user what name to give (e.g. \"Sam\" or \"Sam at Acme\"), then call again with it in `user_name`; it is saved to the account for future calls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en-US",
+              "en-GB",
+              "en-AU",
+              "en-CA",
+              "en-IN",
+              "es-MX",
+              "es-ES",
+              "es-CO",
+              "es-AR",
+              "es-CL",
+              "pt-BR",
+              "pt-PT",
+              "fr",
+              "it",
+              "ru",
+              "pl",
+              "uk",
+              "ro",
+              "nl",
+              "de"
+            ],
+            "description": "Language the voice agent should use for the entire call, as a supported BCP 47 tag: fr, it, ru, pl, uk, ro, nl, or de (no regional variants), or a regional locale such as en-US (US English), es-MX (Mexican Spanish), or pt-BR (Brazilian Portuguese). The objective and context may be written in another language. Defaults to your account locale, or en-US. Uses your saved voice for that locale, otherwise its default female voice. Applies only to this call; the selected language stays fixed for the entire call. Unsupported locales return unsupported_language before dialing."
+          },
+          "callee_name": {
+            "description": "Who is being called, e.g. \"Zuni Caf\u00e9\". Improves the conversation and the logs.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "context": {
+            "description": "Extra facts the agent may reveal if asked (e.g. party preferences, callback number policy).",
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "objective": {
+            "description": "What the call should achieve, with all needed specifics and acceptable fallbacks. E.g. \"Book a table for 2 tonight at 19:30 under 'Iddo'. Acceptable window 19:00\u201320:30.\"",
+            "maxLength": 2000,
+            "minLength": 10,
+            "type": "string"
+          },
+          "to": {
+            "description": "Destination phone number in E.164, e.g. +14155551234. Supported: Central America, Europe, North America, and South America (Telnyx regions; Caribbean excluded). Destination country codes: BZ, CR, SV, GT, HN, NI, PA, AX, AL, AD, AT, BE, BA, BG, HR, CY, CZ, DK, EE, FO, FI, FR, DE, GI, GR, GL, GG, HU, IS, IE, IM, IT, JE, LV, LI, LT, LU, MK, MT, MC, ME, NL, NO, PL, PT, XK, RO, RU, SM, RS, SK, SI, ES, SJ, SE, CH, UA, GB, VA, US, CA, MX, PM, AR, BO, BR, CL, CO, EC, FK, GF, GY, PY, PE, SR, UY, VE.",
+            "type": "string"
+          },
+          "user_name": {
+            "description": "The user name supplied to the voice agent for the call, e.g. \"Sam\" or \"Sam at Acme\". The default introduction uses it in \"Hi, I\u2019m calling for \u2026 about \u2026\"; a custom introduction follows the saved Account \u2192 Call agent instructions. Only needed when place_call returned user_name_required: ask your user for it, do not invent one. Saved to the account for future calls; a later value updates the saved name.",
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "to",
+          "objective"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "call_id": {
+                "type": "string",
+                "description": "Call identifier used with get_call, end_call and set_call_visibility."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "ringing",
+                  "in_progress",
+                  "completed",
+                  "no_answer",
+                  "busy",
+                  "voicemail",
+                  "failed",
+                  "rejected",
+                  "canceled",
+                  "declined_recording",
+                  "opted_out"
+                ],
+                "description": "Current call lifecycle state."
+              },
+              "to": {
+                "type": "string",
+                "description": "Destination in E.164 format."
+              },
+              "from": {
+                "type": "string",
+                "description": "Caller ID in E.164 format."
+              },
+              "callee_name": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Recipient display name."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "language": {
+                "type": "string",
+                "description": "Resolved call language."
+              },
+              "locale": {
+                "type": "string",
+                "description": "Resolved BCP 47 language/locale for this call."
+              },
+              "voice": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Resolved voice identifier."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "max_duration_minutes": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "description": "Free-call duration cap; null for paid calls."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "description": "ISO 8601 creation time."
+              },
+              "listen_url": {
+                "type": "string",
+                "description": "URL for the user to listen, read the transcript and stop an active call."
+              },
+              "message": {
+                "type": "string",
+                "description": "Polling and allowance guidance."
+              },
+              "pricing": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  },
+                  "rate_version": {
+                    "type": "string",
+                    "description": "Rate deck version."
+                  },
+                  "reserved_usage_units": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "description": "Usage units reserved for the call."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "estimated_total_cents_at_one_minute": {
+                    "type": "string",
+                    "description": "Estimated combined provider cost for one minute."
+                  },
+                  "estimated_telnyx_cents_at_one_minute": {
+                    "type": "string",
+                    "description": "Estimated carrier cost for one minute."
+                  }
+                },
+                "required": [
+                  "currency",
+                  "rate_version",
+                  "estimated_total_cents_at_one_minute",
+                  "estimated_telnyx_cents_at_one_minute"
+                ],
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "call_id",
+              "status",
+              "to",
+              "from",
+              "callee_name",
+              "language",
+              "locale",
+              "voice",
+              "max_duration_minutes",
+              "created_at",
+              "listen_url",
+              "message",
+              "pricing"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "Place call",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "get_call",
+      "description": "Get the status and, once terminal, the structured resolution of a call started with place_call. Returns instantly by default. Pass wait_seconds (max 50) to have the server hold the request and return early on any status change \u2014 fewer round trips while a call is in progress. Terminal statuses: completed, no_answer, busy, voicemail, failed, rejected, canceled, declined_recording, opted_out. rejected means safety screening declined the objective before dialing; error.message and resolution.summary explain why. Terminal calls include a `resolution` {outcome: achieved|partially_achieved|not_achieved|no_conversation, summary, commitments[], follow_ups[], key_facts[]} \u2014 read it before the transcript; it is the answer. Completed calls also carry the transcript (may be marked transcript_truncated) and a recording_url the user can listen to (private links expire after ~1 hour). The resolution can lag the terminal status by a few seconds while it is extracted. Calls include the resolved locale, language, voice, and is_public; public calls return token-free listen and recording URLs that remain accessible while public. Use set_call_visibility only when the user explicitly asks to publish or make private. Every call includes a listen_url \u2014 the call page for the user (live audio + transcript while in progress; recording + transcript once ended). ended_by='user' on a canceled call means the user deliberately stopped it from that page \u2014 don't retry. recording_status=processing means the recording is still being prepared by the carrier (typically ready 15\u201390s after the call ends) \u2014 call get_call again, or pass wait_seconds on an already-terminal call to wait for the recording_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "call_id": {
+            "description": "The id returned by place_call.",
+            "type": "string"
+          },
+          "wait_seconds": {
+            "description": "0 (default) = instant status check. Up to 50 = server-side long-poll.",
+            "maximum": 50,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "call_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "call_id": {
+                "type": "string",
+                "description": "Call identifier used with get_call, end_call and set_call_visibility."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "ringing",
+                  "in_progress",
+                  "completed",
+                  "no_answer",
+                  "busy",
+                  "voicemail",
+                  "failed",
+                  "rejected",
+                  "canceled",
+                  "declined_recording",
+                  "opted_out"
+                ],
+                "description": "Current call lifecycle state."
+              },
+              "to": {
+                "type": "string",
+                "description": "Destination in E.164 format."
+              },
+              "callee_name": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Recipient display name."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "language": {
+                "type": "string",
+                "description": "Resolved call language."
+              },
+              "locale": {
+                "type": "string",
+                "description": "Resolved BCP 47 language/locale for this call."
+              },
+              "voice": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Resolved voice identifier."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "amd_result": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Answering-machine detection result."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "duration_seconds": {
+                "type": "number",
+                "description": "Connected duration in seconds."
+              },
+              "is_public": {
+                "type": "boolean",
+                "description": "Whether the call has a public link."
+              },
+              "listen_url": {
+                "type": "string",
+                "description": "URL for the user to listen, read the transcript and stop an active call."
+              },
+              "resolution": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "achieved",
+                          "partially_achieved",
+                          "not_achieved",
+                          "no_conversation"
+                        ],
+                        "description": "Whether the call objective was met."
+                      },
+                      "summary": {
+                        "type": "string",
+                        "description": "User-facing summary of what happened."
+                      },
+                      "commitments": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "Confirmed commitment."
+                        },
+                        "description": "What the callee agreed to."
+                      },
+                      "follow_ups": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "Next action."
+                        },
+                        "description": "Actions the user still needs to take."
+                      },
+                      "key_facts": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "description": "Fact learned."
+                        },
+                        "description": "Useful information from the conversation."
+                      },
+                      "callee_requested_no_further_calls": {
+                        "type": "boolean",
+                        "description": "Whether the recipient asked not to be called again."
+                      }
+                    },
+                    "required": [
+                      "outcome",
+                      "summary",
+                      "commitments",
+                      "follow_ups",
+                      "key_facts",
+                      "callee_requested_no_further_calls"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "transcript": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "sequence": {
+                      "type": "number"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "callee",
+                        "agent",
+                        "keypad"
+                      ],
+                      "description": "Speaker or confirmed keypad action."
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Transcript text."
+                    },
+                    "at_ms": {
+                      "type": "number",
+                      "description": "Milliseconds from the transcript timeline origin."
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "text",
+                    "at_ms"
+                  ],
+                  "additionalProperties": {}
+                },
+                "description": "Conversation entries; empty before speech is available."
+              },
+              "transcript_truncated": {
+                "type": "boolean",
+                "description": "Whether earlier transcript content was omitted."
+              },
+              "recording_url": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Audio URL when ready; private URLs expire."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recording_status": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "processing",
+                  "available",
+                  "failed"
+                ],
+                "description": "Recording availability."
+              },
+              "costs": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "const": "USD"
+                  },
+                  "reserved_usage_units": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "description": "Reserved usage units; absent on legacy calls."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rate_version": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Rate deck version."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "currency",
+                  "rate_version"
+                ],
+                "additionalProperties": {}
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "description": "Call failure code."
+                      },
+                      "message": {
+                        "type": "string",
+                        "description": "Call failure explanation."
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ended_by": {
+                "type": "string",
+                "description": "Party or system that ended the call."
+              },
+              "end_reason": {
+                "type": "string",
+                "description": "Reason the call ended."
+              },
+              "created_at": {
+                "type": "string",
+                "description": "ISO 8601 creation time."
+              },
+              "ended_at": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "ISO 8601 end time; null while active."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "call_id",
+              "status",
+              "to",
+              "callee_name",
+              "language",
+              "locale",
+              "voice",
+              "amd_result",
+              "duration_seconds",
+              "is_public",
+              "listen_url",
+              "resolution",
+              "transcript",
+              "recording_url",
+              "recording_status",
+              "costs",
+              "error",
+              "created_at",
+              "ended_at"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "Get call",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_calls",
+      "description": "List the authenticated user's recent calls, newest first, with statuses and outcomes. Useful to recover a lost call_id or review call history. Pass the returned next_cursor as cursor to fetch the next page of older calls. next_cursor is null when no older calls remain. Omit cursor to start at the newest calls. limit defaults to 20 (1\u2013100) on every request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "description": "Max rows to return. Default 20.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "cursor": {
+            "description": "Opaque next_cursor from a previous list_calls response. Omit for newest calls.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "description": "Account display name."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Account caller ID in E.164 format."
+                  }
+                },
+                "required": [
+                  "name",
+                  "phone"
+                ],
+                "additionalProperties": {}
+              },
+              "calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "call_id": {
+                      "type": "string",
+                      "description": "Call identifier used with get_call, end_call and set_call_visibility."
+                    },
+                    "is_public": {
+                      "type": "boolean",
+                      "description": "Whether the call has a public link."
+                    },
+                    "to": {
+                      "type": "string",
+                      "description": "Destination in E.164 format."
+                    },
+                    "callee_name": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Recipient display name."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "ringing",
+                        "in_progress",
+                        "completed",
+                        "no_answer",
+                        "busy",
+                        "voicemail",
+                        "failed",
+                        "rejected",
+                        "canceled",
+                        "declined_recording",
+                        "opted_out"
+                      ],
+                      "description": "Current call lifecycle state."
+                    },
+                    "objective": {
+                      "type": "string",
+                      "description": "Requested call objective."
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "ISO 8601 creation time."
+                    },
+                    "duration_seconds": {
+                      "type": "number",
+                      "description": "Connected duration in seconds, or zero before connecting."
+                    },
+                    "outcome": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "achieved",
+                            "partially_achieved",
+                            "not_achieved",
+                            "no_conversation",
+                            "pending"
+                          ],
+                          "description": "Resolution outcome, or pending while terminal analysis is not ready."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "call_id",
+                    "is_public",
+                    "to",
+                    "callee_name",
+                    "status",
+                    "objective",
+                    "created_at",
+                    "duration_seconds",
+                    "outcome"
+                  ],
+                  "additionalProperties": {}
+                },
+                "description": "Recent calls, newest first."
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "description": "Pass as cursor to fetch older calls; null at the end."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "user",
+              "calls",
+              "next_cursor"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "List calls",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "set_call_visibility",
+      "description": "Make a call owned by the authenticated user public or private. Calls are private by default. Only publish when the user explicitly asks: a public call exposes its objective, phone numbers, transcript, result and audio to anyone with its permanent, token-free listen_url, including live audio while in progress. Set is_public to false to disable token-free access again; existing private signed links remain valid until they expire. Public visitors cannot stop the call or change visibility.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "call_id": {
+            "description": "The id of a call owned by this account.",
+            "type": "string"
+          },
+          "is_public": {
+            "description": "true publishes the call; false makes it private again.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "call_id",
+          "is_public"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "call_id": {
+                "type": "string",
+                "description": "Call identifier used with get_call, end_call and set_call_visibility."
+              },
+              "is_public": {
+                "type": "boolean",
+                "description": "Updated visibility; public links expose call data."
+              },
+              "listen_url": {
+                "type": "string",
+                "description": "URL for the user to listen, read the transcript and stop an active call."
+              }
+            },
+            "required": [
+              "call_id",
+              "is_public",
+              "listen_url"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "Set call visibility",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "end_call",
+      "description": "End an in-progress call early. The voice agent wraps up politely (\"I'll let you go, thanks!\") and hangs up; the call is force-terminated if wrap-up takes more than ~10 seconds. Use when the user changes their mind or the call is no longer needed. The partial transcript and resolution are still produced.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "call_id": {
+            "description": "The id returned by place_call.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "call_id": {
+                "type": "string",
+                "description": "Call identifier used with get_call, end_call and set_call_visibility."
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "ringing",
+                  "in_progress",
+                  "completed",
+                  "no_answer",
+                  "busy",
+                  "voicemail",
+                  "failed",
+                  "rejected",
+                  "canceled",
+                  "declined_recording",
+                  "opted_out"
+                ],
+                "description": "Current call lifecycle state."
+              },
+              "ended": {
+                "type": "boolean",
+                "description": "Whether an end request was applied; false if already terminal."
+              },
+              "message": {
+                "type": "string",
+                "description": "Wrap-up or already-ended explanation."
+              }
+            },
+            "required": [
+              "call_id",
+              "status",
+              "ended",
+              "message"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "End call",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "get_phone_number",
+      "description": "Get the phone number connected to the authenticated user's account in E.164 format, along with its caller_id_status (verified or unverified). This is the user's own number used as outbound caller ID, not the service's SMS sending number. Takes no arguments and does not place a call or send a text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "phone_number": {
+                "type": "string",
+                "description": "Authenticated account caller ID in E.164 format."
+              },
+              "caller_id_status": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "unverified"
+                ],
+                "description": "Caller ID verification state."
+              }
+            },
+            "required": [
+              "phone_number",
+              "caller_id_status"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string",
+                "description": "Machine-readable failure code."
+              },
+              "message": {
+                "type": "string",
+                "description": "Explanation or recovery guidance."
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "additionalProperties": {}
+          }
+        ],
+        "description": "Successful result or a machine-readable tool error."
+      },
+      "annotations": {
+        "title": "Get connected phone number",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "version": "0.2.0",
+  "author": "Patch MCP",
+  "authorUrl": "https://www.patchmcp.com",
+  "category": "productivity",
+  "tags": [
+    "phone",
+    "calling",
+    "voice",
+    "communication",
+    "productivity"
+  ]
+}
