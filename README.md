@@ -1,6 +1,6 @@
 # Patch MCP
 
-[Patch MCP](https://www.patchmcp.com) lets AI assistants make real outbound phone calls from your own verified phone number and retrieve answers, transcripts and recordings.
+[Patch MCP](https://www.patchmcp.com) gives AI assistants a phone workspace: make outbound calls, configure agents to answer incoming calls, and review call outcomes, transcripts and available recordings.
 
 This repository contains public connection metadata and marketplace manifests for the hosted Patch MCP service.
 
@@ -18,19 +18,21 @@ Add this remote Streamable HTTP server to your MCP client:
 }
 ```
 
-Sign in through the client's OAuth flow and verify your phone number. No local server process or API key is required. Public MCP initialization and tool discovery work without authentication; tool execution and account data require OAuth.
+Sign in through the client's OAuth flow. Verify your caller ID to call from your own number; eligible accounts can also configure Patch phone numbers. No local server process or API key is required. Public MCP initialization and tool discovery work without authentication; tool execution and account data require OAuth.
 
 ## Tools
 
-- `estimate_call`: Check destination support and estimated usage before dialing.
-- `place_call`: Start a real phone call with a specific objective.
-- `get_call`: Retrieve call status, outcome, transcript and recording when available.
-- `list_calls`: Browse your recent calls with pagination.
-- `end_call`: Stop an active call.
-- `get_phone_number`: Inspect your connected caller ID.
-- `set_call_visibility`: Explicitly publish a call or make it private again.
+Start with `get_capabilities` to discover available actions, permissions and prerequisites. Depending on your account and granted scopes, you can:
 
-Calls are private by default. Public call sharing exposes call details, transcripts and audio to anyone with the link. Calls are recorded with a spoken disclosure. Never use Patch for emergencies. Supported routes and usage depend on your account and destination; use `estimate_call` before calling. Texting is currently unavailable.
+- Place and stop outbound calls with `place_call` and `end_call`.
+- Check a call with `get_call` and browse calls and agent tests with `list_activity`.
+- List and manage phone numbers, configure inbound and outbound agents, and select voices.
+- Connect external tools to agents and run synthetic agent tests.
+- Review account and billing information.
+
+The hosted server supplies the current tool definitions. See the [tool reference](https://www.patchmcp.com/docs/tools) for details. Availability depends on account features, permissions and destination. Additional permissions require reconnecting and approving the requested scopes.
+
+Calls are private by default. Public call sharing exposes call details, transcripts and audio to anyone with the link. Never use Patch for emergencies.
 
 ## Documentation
 
